@@ -20,3 +20,4 @@ File size and sha256 checksum are used to check if files are identical or not.
 * [Create backup](CREATE.md)
 * [Search in backup](SEARCH.md)
 * [Restore from backup](RESTORE.md)
+* [Examples](EXAMPLES.md)
