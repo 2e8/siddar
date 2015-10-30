@@ -12,6 +12,7 @@ File size and sha256 checksum are used to check if files are identical or not.
 * **tar / gz / bz2 archive formats:** volumes can be compressed;
 * **include / exclude filters:** you can specify which files/folders should be included in backup or restored from backup;
 * **cross-platform:** requires Python3 with standard libraries only.
+* **MIT License**
 
 ## Documentation
 
