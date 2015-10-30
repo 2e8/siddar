@@ -4,9 +4,9 @@
 
 Initial backup should be done manually.
 
-`D:\siddar.py create d:\tmp d:\repository 2014-01-01_%name%`
+`D:\siddar.py create d:\tmp d:\repository 2014-01-01_test`
 
-`%rep%\%dt%_%name%.cat` should be copied to `%rep%\%name%.cat` also manually. (`%name%.cat` is a reference for next incremental backup.)
+`D:\repository\2014-01-01_test.cat` should be copied to `D:\repository\test.cat` also manually. (`test.cat` is a reference for next incremental backup.)
 ```
 set dt=%date:~6,4%-%date:~3,2%-%date:~0,2%
 set name=test
