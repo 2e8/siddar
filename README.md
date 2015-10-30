@@ -15,6 +15,7 @@ File size and sha256 checksum are used to check if files are identical or not.
 
 ## Documentation
 
+* [General concept](CONCEPT.md)
 * [Create backup](CREATE.md)
 * [Search in backup](SEARCH.md)
 * [Restore from backup](RESTORE.md)
