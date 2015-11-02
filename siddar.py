@@ -61,10 +61,11 @@ STR_HASH_LIST = 'HASH_LIST'
 STR_HASH = 'HASH'
 STR_HASH_LIST_END = 'HASH_LIST_END'
 
-def calcHash(path): # IOError
+
+def calcHash(path):  # IOError
     h = hashlib.sha256()
     
-    with open(path, 'rb') as f: ### IOError
+    with open(path, 'rb') as f:  # IOError
         block = f.read(h.block_size)
         while block:
             h.update(block)
@@ -72,41 +73,46 @@ def calcHash(path): # IOError
     
     return h.hexdigest()
 
+
 class CatalogFormatError(Exception):
     pass
+
 
 class HashNameError(Exception):
     pass
 
+
 class FileInfo():
     def __init__(self, isDir):
-        self.marked = False # for 'include'
+        self.marked = False  # for 'include'
         self.isDir = isDir
 
-def hashName(info): # HashNameError
+
+def hashName(info):  # HashNameError
     if info.isDir or (info.hash == STR_EMPTY) or (info.size == -1):
         raise HashNameError()
     return info.hash + '.' + str(info.size)
 
-class FileList(): # OSError, IOError, CatalogFormatError
+
+class FileList():  # OSError, IOError, CatalogFormatError
     def __init__(self):
         self.dict = {}
     
-    def getDirList(self, rootDir, relDir=STR_EMPTY): # OSError
+    def getDirList(self, rootDir, relDir=STR_EMPTY):  # OSError
         # rootDir, relDir - unicode objects
         if relDir == STR_EMPTY:
             self.dict.clear()
         currentDir = rootDir + relDir
-        currentDirList = os.listdir(currentDir) ### OSError
+        currentDirList = os.listdir(currentDir)  # OSError
         for f in currentDirList:
             fullPath = currentDir + STR_SLASH + f
             relPath = relDir + STR_SLASH + f
-            if os.path.isdir(fullPath): ### OSError
+            if os.path.isdir(fullPath):  # OSError
                 pathInfo = FileInfo(True)
-                pathInfo.mtime = int(os.path.getmtime(fullPath)) ### OSError
+                pathInfo.mtime = int(os.path.getmtime(fullPath))  # OSError
                 self.dict[relPath] = pathInfo
                 self.getDirList(rootDir, relPath)
-            elif os.path.isfile(fullPath): ### OSError
+            elif os.path.isfile(fullPath):  # OSError
                 pathInfo = FileInfo(False)
                 # read mtime, size and hash directly before file checking / archiving
                 self.dict[relPath] = pathInfo
@@ -163,7 +169,7 @@ class FileList(): # OSError, IOError, CatalogFormatError
             while d != STR_SLASH:
                 if d not in keyList:
                     pathInfo = FileInfo(False)
-                    pathInfo.marked = False # for 'include'
+                    pathInfo.marked = False  # for 'include'
                     pathInfo.isDir = True
                     pathInfo.mtime = self.dict[key].mtime
                     self.dict[d] = pathInfo
@@ -177,7 +183,7 @@ class FileList(): # OSError, IOError, CatalogFormatError
                     if fnmatch.fnmatch(key, pattern):
                         del self.dict[key]
     
-    #def calcHashes(self, rootDir, verbose=False): # IOError
+    # def calcHashes(self, rootDir, verbose=False):  # IOError
     #    if verbose:
     #        s1 = 0
     #        for key in self.dict:
@@ -192,7 +198,7 @@ class FileList(): # OSError, IOError, CatalogFormatError
     #                s2 = s2 + self.dict[key].size
     #                print('Calculated hash: ' + str(100*s2/s1) + '% - ' + str(s2) + '/' + str(s1))
     
-    def save(self, fObject): # IOError
+    def save(self, fObject):  # IOError
         # fObject = open('file.name', mode='w', encoding='utf-8')
         fObject.write(STR_DIR_LIST + STR_EOL)
         key_list = list(self.dict.keys())
@@ -212,7 +218,7 @@ class FileList(): # OSError, IOError, CatalogFormatError
                 fObject.write(STR_FILE_END + STR_EOL)
         fObject.write(STR_DIR_LIST_END + STR_EOL)
     
-    def load(self, fObject): # IOError, CatalogFormatError
+    def load(self, fObject):  # IOError, CatalogFormatError
         # fObject = open('file.name', mode='r', encoding='utf-8')
         self.dict.clear()
         fObject.seek(0, os.SEEK_SET)
@@ -282,16 +288,17 @@ class FileList(): # OSError, IOError, CatalogFormatError
                 state = WAIT_DIR_FILE
             
             else:
-                raise CatalogFormatError() # CatalogFormatError
+                raise CatalogFormatError()  # CatalogFormatError
+
 
 # key = hash + u'.' + unicode(size)
 # value = arch name
 # FileList.dict[key].hashName
-class HashList(): # IOError, CatalogFormatError
+class HashList():  # IOError, CatalogFormatError
     def __init__(self):
         self.dict = {}
     
-    def save(self, fObject): # IOError
+    def save(self, fObject):  # IOError
         # fObject = open('file.name', mode='w', encoding='utf-8')
         fObject.write(STR_HASH_LIST + STR_EOL)
         key_list = list(self.dict.keys())
@@ -300,8 +307,8 @@ class HashList(): # IOError, CatalogFormatError
             fObject.write(STR_HASH + STR_TAB + key + STR_TAB + self.dict[key] + STR_EOL)
         fObject.write(STR_HASH_LIST_END + STR_EOL)
     
-    def load(self, fObject): # IOError, CatalogFormatError
-    # fObject = open(u'file.name', mode='r', encoding='utf-8')
+    def load(self, fObject):  # IOError, CatalogFormatError
+        # fObject = open(u'file.name', mode='r', encoding='utf-8')
         self.dict.clear()
         fObject.seek(0, os.SEEK_SET)
         
@@ -322,8 +329,9 @@ class HashList(): # IOError, CatalogFormatError
                     else:
                         raise CatalogFormatError()
 
+
 # not correct for unicode file names
-class TarFileWriter: # OSError, IOError, tarfile.TarError
+class TarFileWriter:  # OSError, IOError, tarfile.TarError
     def __init__(self, name, maxPartSize, type='tar'):
         self.TarName = name
         self.PartNumber = 0
@@ -344,40 +352,40 @@ class TarFileWriter: # OSError, IOError, tarfile.TarError
         else:
             raise IOError()
     
-    def close(self): # IOError
+    def close(self):  # IOError
         if not self.Closed:
             self.PartFile.close()
             self.PartFile = None
             self.Closed = True
     
-    def __new_part(self): # IOError
+    def __new_part(self):  # IOError
         self.close()
         self.PartNumber = self.PartNumber + 1
         self.PartFile = tarfile.open(self.TarName + STR_POINT + str(self.PartNumber) + self.Ext, self.Mode)
         self.PartSize = 0
         self.Closed = False
     
-    def add(self, fPath, tarName): # OSError, IOError, tarfile.TarError
+    def add(self, fPath, tarName):  # OSError, IOError, tarfile.TarError
         if self.Closed:
             self.__new_part()
         # prepare file object
-        fSize = os.path.getsize(fPath) # OSError
-        fTarInfo = self.PartFile.gettarinfo(fPath) # tarfile.TarError
+        fSize = os.path.getsize(fPath)  # OSError
+        fTarInfo = self.PartFile.gettarinfo(fPath)  # tarfile.TarError
         fTarInfo.name = tarName
         
-        with open(fPath, 'rb') as fObject: # IOError
+        with open(fPath, 'rb') as fObject:  # IOError
             # copy file to tar
             while ((self.PartSize + fSize + 3*tarfile.BLOCKSIZE) > self.MaxPartSize): 
                 fSizeToSave = self.MaxPartSize - self.PartSize - 3*tarfile.BLOCKSIZE
                 fTarInfo.size = fSizeToSave
-                self.PartFile.addfile(fTarInfo, fObject) # tarfile.TarError
+                self.PartFile.addfile(fTarInfo, fObject)  # tarfile.TarError
                 self.PartSize = self.PartSize + tarfile.BLOCKSIZE + fSizeToSave
                 assert (self.PartSize + 2*tarfile.BLOCKSIZE) == self.MaxPartSize
                 self.__new_part()
                 fSize = fSize - fSizeToSave
                 
             fTarInfo.size = fSize
-            self.PartFile.addfile(fTarInfo, fObject) # tarfile.TarError
+            self.PartFile.addfile(fTarInfo, fObject)  # tarfile.TarError
             # recalc PartSize
             self.PartSize = self.PartSize + tarfile.BLOCKSIZE + \
                             (fSize // tarfile.BLOCKSIZE) * tarfile.BLOCKSIZE
@@ -389,8 +397,9 @@ class TarFileWriter: # OSError, IOError, tarfile.TarError
         if ((self.PartSize + 3*tarfile.BLOCKSIZE) >= self.MaxPartSize):
             self.close()
 
+
 # not correct for unicode file names
-class TarFileReader: # KeyError, IOError, tarfile.TarError
+class TarFileReader:  # KeyError, IOError, tarfile.TarError
     def __init__(self, name):
         self.TarName = name
         self.PartNumber = 0
@@ -405,18 +414,18 @@ class TarFileReader: # KeyError, IOError, tarfile.TarError
         else:
             raise IOError()
     
-    def close(self): # IOError
+    def close(self):  # IOError
         if not self.Closed:
             self.PartFile.close()
             self.PartFile = None
             self.Closed = True
     
-    def __next_part(self): # IOError
+    def __next_part(self):  # IOError
         self.close()
         self.PartNumber = self.PartNumber + 1
         self.PartFile = tarfile.open(self.TarName + STR_POINT + str(self.PartNumber) + self.Ext)
     
-    #def list(self):
+    # def list(self):
     #    self.PartNumber = 0
     #    noFile = False
     #    lst = []
@@ -433,7 +442,7 @@ class TarFileReader: # KeyError, IOError, tarfile.TarError
     #                fTarInfo = self.PartFile.next()
     #    return lst
     
-    def extract(self, tarName, fPath): # KeyError, IOError, tarfile.TarError
+    def extract(self, tarName, fPath):  # KeyError, IOError, tarfile.TarError
         self.PartNumber = 0
         
         # ищем первый том в котором есть такой файл
@@ -450,29 +459,30 @@ class TarFileReader: # KeyError, IOError, tarfile.TarError
                 pass
         
         if found:
-            with open(fPath, 'wb') as fObject: # IOError
+            with open(fPath, 'wb') as fObject:  # IOError
                 while found:
                     # копируем в файл
-                    tarBuffer = self.PartFile.extractfile(fTarInfo) # tarfile.TarError
+                    tarBuffer = self.PartFile.extractfile(fTarInfo)  # tarfile.TarError
                     fSize = fTarInfo.size
                     while (fSize > 0):
                         if (fSize > tarfile.BLOCKSIZE):
                             fSizeToSave = tarfile.BLOCKSIZE
                         else:
                             fSizeToSave = fSize
-                        fObject.write(tarBuffer.read(tarfile.BLOCKSIZE)) # IOError, tarfile.TarError
+                        fObject.write(tarBuffer.read(tarfile.BLOCKSIZE))  # IOError, tarfile.TarError
                         fSize = fSize - fSizeToSave
-                    tarBuffer.close() # tarfile.TarError
+                    tarBuffer.close()  # tarfile.TarError
                     # проверяем в следующем томе
                     try:
                         self.__next_part()
-                        fTarInfo = self.PartFile.getmember(tarName) # tarfile.TarError
+                        fTarInfo = self.PartFile.getmember(tarName)  # tarfile.TarError
                     except IOError:
                         found = False
                     except KeyError:
                         found = False
         else:
             raise KeyError()
+
 
 def fCreate(args):
     # check source
@@ -533,7 +543,7 @@ def fCreate(args):
     
     # create TarFileWriter
     writer = TarFileWriter(args.repository + STR_SLASH + args.name, args.size, compr)
-    # check files and if new/chenged add to archive
+    # check files and if new/changed add to archive
     cAll = 0
     cNew = 0
     sizeAll = 0
@@ -611,6 +621,7 @@ def fCreate(args):
     finally:
         fObject.close()
 
+
 def fFind(args):
     # check repository
     if not os.path.isdir(args.repository):
@@ -656,18 +667,19 @@ def fFind(args):
         for key in keyList:
             print(cat + ': ' + key)
 
+
 def fRestore(args):
     # check repository
     if not os.path.isdir(args.repository):
         print('ERROR: Repository not found!\n')
         return
     
-    # check existance of catalogue file
+    # check existence of catalogue file
     if not os.path.isfile(args.repository + STR_SLASH + args.name + STR_CAT_EXT):
         print('ERROR: Catalogue not found!\n')
         return
     
-    # check destination existance
+    # check destination existence
     if not os.path.isdir(args.destination):
         print('ERROR: Destination not found!\n')
         return
@@ -883,7 +895,7 @@ args.func(args)
 # // целочисленное деление, результат – целое число (дробная часть отбрасывается)
 # % деление по модулю
 
-#tar file format
+# tar file format
 # 1 file info - BLOCKSIZE (512)
 # 1 file data - filled by zeros to BLOCKSIZE (512)
 # 2 file info - BLOCKSIZE (512)
@@ -892,5 +904,5 @@ args.func(args)
 # N file data - filled by zeros to BLOCKSIZE (512)
 # two finishing zero blocks - BLOCKSIZE * 2 (512 * 2)
 # filled by zeros to RECORDSIZE (BLOCKSIZE * 20) (512 * 20)
-#tarfile.BLOCKSIZE = 512
-#tarfile.RECORDSIZE = BLOCKSIZE * 20
+# tarfile.BLOCKSIZE = 512
+# tarfile.RECORDSIZE = BLOCKSIZE * 20
