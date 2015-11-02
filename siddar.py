@@ -505,33 +505,29 @@ def sh_create(sh_args):
     if os.path.isfile(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT):
         print('ERROR: Such archive already exists!')
         return
-    
-    # create sourceFileList
-    source_list = FileList()
-    try:
-        source_list.read_dir_list(sh_args.source)
-    except IOError as e:
-        print('ERROR: Can not read: ' + e.filename)
-        return
-    
-    # include / exclude files / dirs
-    source_list.include_hierarchy(sh_args.include)
-    source_list.exclude(sh_args.exclude)
             
-    # create TmpHashList
+    # create empty reference and hash lists
+    reference_list = FileList()
     hash_list = HashList()
-    
+
+    # load reference and hash lists
     if sh_args.reference is not None:
         # check if reference file exists
         ref_path = sh_args.repository + '/' + sh_args.reference + STR_CAT_EXT
         if not os.path.isfile(ref_path):
             print('ERROR: Reference not found!')
             return
-        # load reference_list and hash_list
-        reference_list = FileList()
         reference_list.load_file(ref_path)
         hash_list.load_file(ref_path)
-    
+
+    # create list of files/dirs in source destination
+    source_list = FileList()
+    source_list.read_dir_list(sh_args.source)
+
+    # include / exclude files / dirs
+    source_list.include_hierarchy(sh_args.include)
+    source_list.exclude(sh_args.exclude)
+
     # compression
     compr = 'tar'
     if sh_args.compression is not None:
@@ -556,8 +552,7 @@ def sh_create(sh_args):
                     source_list.dict[file_name].mtime = int(os.path.getmtime(file_path))
                     source_list.dict[file_name].size = os.path.getsize(file_path)
                     # check if such file is in reference
-                    if (not sh_args.recalculate) and (sh_args.reference is not None) and \
-                            (file_name in reference_list.dict) and \
+                    if (not sh_args.recalculate) and (file_name in reference_list.dict) and \
                             (not reference_list.dict[file_name].isDir) and \
                             (source_list.dict[file_name].mtime == reference_list.dict[file_name].mtime) and \
                             (source_list.dict[file_name].size == reference_list.dict[file_name].size):
@@ -606,16 +601,19 @@ def sh_create(sh_args):
         sys.stdout.flush()
     
     # save catalogue
-    try:                  
+    try:
         file_object = open(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT,
                            mode='w', encoding='utf-8')
-        source_list.save(file_object)
-        hash_list.save(file_object)
+        try:
+            source_list.save(file_object)
+            hash_list.save(file_object)
+        except IOError:
+            print('ERROR: Can not create catalogue file!')
+            return
+        finally:
+            file_object.close()
     except IOError:
         print('ERROR: Can not create catalogue file!')
-        return
-    finally:
-        file_object.close()
 
 
 def sh_find(sh_args):
