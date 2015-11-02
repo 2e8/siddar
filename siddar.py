@@ -5,7 +5,7 @@
 #
 # MIT License
 # http://opensource.org/licenses/MIT
-# Copyright (c) 2013 Denys Orlenko
+# Copyright (c) 2015 Denys Orlenko
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -86,6 +86,8 @@ class FileInfo():
     def __init__(self, is_dir):
         self.marked = False  # for 'include'
         self.isDir = is_dir
+        self.hash = STR_EMPTY
+        self.size = -1
 
 
 def hash_name(info):  # HashNameError
@@ -280,6 +282,22 @@ class FileList():  # OSError, IOError, CatalogFormatError
             else:
                 raise CatalogFormatError()  # CatalogFormatError
 
+    def load_file(self, file_name):
+        try:
+            file_object = open(file_name, mode='r', encoding='utf-8')
+            try:
+                self.load(file_object)
+            except IOError:
+                print('ERROR: Can not read reference catalogue file!')
+                return
+            except CatalogFormatError:
+                print('ERROR: Reference catalogue is damaged!')
+                return
+            finally:
+                file_object.close()
+        except IOError:
+            print('ERROR: Can not open reference catalogue file!')
+
 
 # key = hash + u'.' + unicode(size)
 # value = arch name
@@ -318,6 +336,22 @@ class HashList():  # IOError, CatalogFormatError
                         self.dict[lst[1]] = lst[2]
                     else:
                         raise CatalogFormatError()
+
+    def load_file(self, file_name):
+        try:
+            file_object = open(file_name, mode='r', encoding='utf-8')
+            try:
+                self.load(file_object)
+            except IOError:
+                print('ERROR: Can not read reference catalogue file!')
+                return
+            except CatalogFormatError:
+                print('ERROR: Reference catalogue is damaged!')
+                return
+            finally:
+                file_object.close()
+        except IOError:
+            print('ERROR: Can not open reference catalogue file!')
 
 
 # not correct for unicode file names
@@ -495,18 +529,8 @@ def sh_create(sh_args):
             return
         # load reference_list and hash_list
         reference_list = FileList()
-        try:
-            file_object = open(ref_path, mode='r', encoding='utf-8')
-            reference_list.load(file_object)
-            hash_list.load(file_object)
-        except IOError:
-            print('ERROR: Can not read reference catalogue file!')
-            return
-        except CatalogFormatError:
-            print('ERROR: Reference catalogue is damaged!')
-            return
-        finally:
-            file_object.close()
+        reference_list.load_file(ref_path)
+        hash_list.load_file(ref_path)
     
     # compression
     compr = 'tar'
@@ -617,17 +641,7 @@ def sh_find(sh_args):
     for cat in cat_list:
         # loading catalogue
         file_list = FileList()
-        try:
-            file_object = open(sh_args.repository + STR_SLASH + cat, mode='r', encoding='utf-8')
-            file_list.load(file_object)
-        except IOError:
-            print('ERROR: Can not read  catalogue file: ' + cat)
-            return
-        except CatalogFormatError:
-            print('ERROR: Catalogue is damaged: ' + cat)
-            return
-        finally:
-            file_object.close()
+        file_list.load_file(sh_args.repository + STR_SLASH + cat)
         
         # include / exclude files / dirs
         file_list.include(sh_args.include)
@@ -659,19 +673,8 @@ def sh_restore(sh_args):
     # read FileList and HashList from catalogue
     source_list = FileList()
     hash_list = HashList()
-    try:
-        file_object = open(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT,
-                           mode='r', encoding='utf-8')
-        source_list.load(file_object)
-        hash_list.load(file_object)
-    except IOError:
-        print('ERROR: Can not read catalogue file!')
-        return
-    except CatalogFormatError:
-        print('ERROR: Catalogue is damaged!')
-        return
-    finally:
-        file_object.close()
+    source_list.load_file(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT)
+    hash_list.load_file(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT)
     
     # include / exclude files / dirs
     source_list.fix_hierarchy()
