@@ -98,8 +98,7 @@ class FileList():  # OSError, IOError, CatalogFormatError
     def __init__(self):
         self.dict = {}
     
-    def getDirList(self, root_dir, rel_dir=STR_EMPTY):  # OSError
-        # rootDir, relDir - unicode objects
+    def _get_dir_list(self, root_dir, rel_dir=STR_EMPTY):  # OSError
         if rel_dir == STR_EMPTY:
             self.dict.clear()
         current_dir = root_dir + rel_dir
@@ -111,13 +110,20 @@ class FileList():  # OSError, IOError, CatalogFormatError
                 path_info = FileInfo(True)
                 path_info.mtime = int(os.path.getmtime(full_path))  # OSError
                 self.dict[rel_path] = path_info
-                self.getDirList(root_dir, rel_path)
+                self._get_dir_list(root_dir, rel_path)
             elif os.path.isfile(full_path):  # OSError
                 path_info = FileInfo(False)
                 # read mtime, size and hash directly before file checking / archiving
                 self.dict[rel_path] = path_info
-    
-    def __unmarkAll__(self):
+
+    def read_dir_list(self, source_path):
+        try:
+            self._get_dir_list(source_path)
+        except IOError as e:
+            print('ERROR: Can not read: ' + e.filename)
+            return
+
+    def _unmark_all(self):
         for key in self.dict:
             self.dict[key].marked = False
     
@@ -126,7 +132,7 @@ class FileList():  # OSError, IOError, CatalogFormatError
     def include(self, pattern_list):
         if (pattern_list is not None) and (len(pattern_list) > 0):
             # unmark all records
-            self.__unmarkAll__()
+            self._unmark_all()
             # mark included
             for pattern in pattern_list:
                 for key in self.dict:
@@ -140,14 +146,14 @@ class FileList():  # OSError, IOError, CatalogFormatError
     
     # include not only matched files/folders but also all parent folders for matched files/folders
     # use for "create" and "restore"
-    def includeHierarchy(self, pattern_list):
+    def include_hierarchy(self, pattern_list):
         if (pattern_list is not None) and (len(pattern_list) > 0):
             # unmark all records
-            self.__unmarkAll__()
+            self._unmark_all()
             # mark included
             key_list = list(self.dict.keys())
             for pattern in pattern_list:
-                for key in self.dict:
+                for key in key_list:
                     if fnmatch.fnmatch(key, pattern):
                         self.dict[key].marked = True
                         # mark folders with marked files/folders
@@ -162,7 +168,7 @@ class FileList():  # OSError, IOError, CatalogFormatError
                     del self.dict[key]
     
     # check and if not exist all parent folders for files/folders in list
-    def fixHierarchy(self):
+    def fix_hierarchy(self):
         key_list = list(self.dict.keys())
         for key in key_list:
             d = os.path.dirname(key)
@@ -205,8 +211,6 @@ class FileList():  # OSError, IOError, CatalogFormatError
     
     def load(self, file_object):  # IOError, CatalogFormatError
         # file_object = open('file.name', mode='r', encoding='utf-8')
-
-        # consts for state machine
         wait_list = 0
         wait_dir_file = 1
         wait_path = 2
@@ -231,7 +235,7 @@ class FileList():  # OSError, IOError, CatalogFormatError
                 state = wait_dir_file
             
             elif ((state == wait_dir_file) and
-                ((line == STR_DIR) or (line == STR_FILE) or (line == STR_DIR_LIST_END))):
+                  ((line == STR_DIR) or (line == STR_FILE) or (line == STR_DIR_LIST_END))):
                 if line == STR_DIR:
                     info_is_dir = True
                     state = wait_path
@@ -262,13 +266,13 @@ class FileList():  # OSError, IOError, CatalogFormatError
             
             elif (state == wait_dir_end) and (line == STR_DIR_END):
                 self.dict[info_path] = FileInfo(True)
-                self.dict[info_path].mtime =info_mtime
+                self.dict[info_path].mtime = info_mtime
                 info_is_dir = False
                 state = wait_dir_file
             
             elif (state == wait_file_end) and (line == STR_FILE_END):
                 self.dict[info_path] = FileInfo(False)
-                self.dict[info_path].mtime =info_mtime
+                self.dict[info_path].mtime = info_mtime
                 self.dict[info_path].size = info_size
                 self.dict[info_path].hash = info_hash
                 state = wait_dir_file
@@ -373,8 +377,7 @@ class TarFileWriter:  # OSError, IOError, tarfile.TarError
             file_tar_info.size = file_size
             self.PartFile.addfile(file_tar_info, file_object)  # tarfile.TarError
             # recalculate PartSize
-            self.PartSize = self.PartSize + tarfile.BLOCKSIZE + \
-                            (file_size // tarfile.BLOCKSIZE) * tarfile.BLOCKSIZE
+            self.PartSize = self.PartSize + tarfile.BLOCKSIZE + (file_size // tarfile.BLOCKSIZE) * tarfile.BLOCKSIZE
             if (file_size % tarfile.BLOCKSIZE) > 0:
                 self.PartSize += tarfile.BLOCKSIZE
         
@@ -472,13 +475,13 @@ def sh_create(sh_args):
     # create sourceFileList
     source_list = FileList()
     try:
-        source_list.getDirList(sh_args.source)
+        source_list.read_dir_list(sh_args.source)
     except IOError as e:
         print('ERROR: Can not read: ' + e.filename)
         return
     
     # include / exclude files / dirs
-    source_list.includeHierarchy(sh_args.include)
+    source_list.include_hierarchy(sh_args.include)
     source_list.exclude(sh_args.exclude)
             
     # create TmpHashList
@@ -529,7 +532,7 @@ def sh_create(sh_args):
                     source_list.dict[file_name].mtime = int(os.path.getmtime(file_path))
                     source_list.dict[file_name].size = os.path.getsize(file_path)
                     # check if such file is in reference
-                    if (not sh_args.recalculate) and (sh_args.reference != None) and \
+                    if (not sh_args.recalculate) and (sh_args.reference is not None) and \
                             (file_name in reference_list.dict) and \
                             (not reference_list.dict[file_name].isDir) and \
                             (source_list.dict[file_name].mtime == reference_list.dict[file_name].mtime) and \
@@ -552,8 +555,8 @@ def sh_create(sh_args):
                     if sh_args.ignore:
                         answer = 'i'
                     else:
-                        answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
-                    if answer == 'c':
+                        answer = input('Abort (a) / Ignore (i) / Retry (other): ')
+                    if answer == 'a':
                         writer.close()
                         return
                     elif answer == 'i':
@@ -561,14 +564,14 @@ def sh_create(sh_args):
                         ok = True
                 except tarfile.TarError:
                     print('ERROR: Can not write files to archive!')
-                    answer = input('Cancel (c) / Retry (other): ')
-                    if answer == 'c':
+                    answer = input('Abort (a) / Retry (other): ')
+                    if answer == 'a':
                         writer.close()
                         return
             c_all += 1
         if not sh_args.quiet:
             sys.stdout.write("\rFiles (New/All): %s / %s, Size (New/All): %.02f Mb / %.02f Mb" % (
-                            c_new, c_all, size_new/1024.0/1024.0, size_all/1024.0/1024.0))
+                             c_new, c_all, size_new/1024.0/1024.0, size_all/1024.0/1024.0))
             sys.stdout.flush()
     
     # close TarFileWriter
@@ -581,7 +584,7 @@ def sh_create(sh_args):
     # save catalogue
     try:                  
         file_object = open(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT,
-                            mode='w', encoding='utf-8')
+                           mode='w', encoding='utf-8')
         source_list.save(file_object)
         hash_list.save(file_object)
     except IOError:
@@ -658,7 +661,7 @@ def sh_restore(sh_args):
     hash_list = HashList()
     try:
         file_object = open(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT,
-                            mode='r', encoding='utf-8')
+                           mode='r', encoding='utf-8')
         source_list.load(file_object)
         hash_list.load(file_object)
     except IOError:
@@ -671,8 +674,8 @@ def sh_restore(sh_args):
         file_object.close()
     
     # include / exclude files / dirs
-    source_list.fixHierarchy()
-    source_list.includeHierarchy(sh_args.include)
+    source_list.fix_hierarchy()
+    source_list.include_hierarchy(sh_args.include)
     source_list.exclude(sh_args.exclude)
     
     # create not existing dirs and extract new or changed files
@@ -702,8 +705,8 @@ def sh_restore(sh_args):
                 if sh_args.ignore:
                     answer = 'i'
                 else:
-                    answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
-                if answer == 'c':
+                    answer = input('Abort (a) / Ignore (i) / Retry (other): ')
+                if answer == 'a':
                     return
                 elif answer == 'i':
                     ok = True
@@ -733,8 +736,8 @@ def sh_restore(sh_args):
                     if sh_args.ignore:
                         answer = 'i'
                     else:
-                        answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
-                    if answer == 'c':
+                        answer = input('Abort (a) / Ignore (i) / Retry (other): ')
+                    if answer == 'a':
                         return
                     elif answer == 'i':
                         ok = True
@@ -747,20 +750,20 @@ def sh_restore(sh_args):
         while not ok:
             try:
                 os.utime(file_path, (source_list.dict[file_name].mtime,
-                        source_list.dict[file_name].mtime))
+                         source_list.dict[file_name].mtime))
                 ok = True
             except OSError as e:
                 print('ERROR: Can not update time for: ' + e.filename)
                 if sh_args.ignore:
                     answer = 'i'
                 else:
-                    answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
-                if answer == 'c':
+                    answer = input('Abort (a) / Ignore (i) / Retry (other): ')
+                if answer == 'a':
                     return
                 elif answer == 'i':
                     ok = True
         sys.stdout.write("\rFiles (New/All): %s / %s, Size (New/All): %.02f Mb / %.02f Mb" % (
-                        c_new, c_all, size_new/1024.0/1024.0, size_all/1024.0/1024.0))
+                         c_new, c_all, size_new/1024.0/1024.0, size_all/1024.0/1024.0))
         sys.stdout.flush()
     
     sys.stdout.write(STR_EOL)
@@ -769,7 +772,7 @@ def sh_restore(sh_args):
     # get FileList for destination
     if sh_args.delete:
         destination_list = FileList()
-        destination_list.getDirList(sh_args.destination)
+        destination_list.read_dir_list(sh_args.destination)
         # remove old files
         key_list = list(destination_list.dict.keys())
         key_list.sort()
@@ -787,8 +790,8 @@ def sh_restore(sh_args):
                         if sh_args.ignore:
                             answer = 'i'
                         else:
-                            answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
-                        if answer == 'c':
+                            answer = input('Abort (a) / Ignore (i) / Retry (other): ')
+                        if answer == 'a':
                             return
                         elif answer == 'i':
                             ok = True
@@ -810,8 +813,8 @@ def sh_restore(sh_args):
                         if sh_args.ignore:
                             answer = 'i'
                         else:
-                            answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
-                        if answer == 'c':
+                            answer = input('Abort (a) / Ignore (i) / Retry (other): ')
+                        if answer == 'a':
                             return
                         elif answer == 'i':
                             ok = True
