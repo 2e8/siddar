@@ -62,7 +62,7 @@ STR_HASH = 'HASH'
 STR_HASH_LIST_END = 'HASH_LIST_END'
 
 
-def calcHash(path):  # IOError
+def calc_hash(path):  # IOError
     h = hashlib.sha256()
     
     with open(path, 'rb') as f:  # IOError
@@ -83,12 +83,12 @@ class HashNameError(Exception):
 
 
 class FileInfo():
-    def __init__(self, isDir):
+    def __init__(self, is_dir):
         self.marked = False  # for 'include'
-        self.isDir = isDir
+        self.isDir = is_dir
 
 
-def hashName(info):  # HashNameError
+def hash_name(info):  # HashNameError
     if info.isDir or (info.hash == STR_EMPTY) or (info.size == -1):
         raise HashNameError()
     return info.hash + '.' + str(info.size)
@@ -98,24 +98,24 @@ class FileList():  # OSError, IOError, CatalogFormatError
     def __init__(self):
         self.dict = {}
     
-    def getDirList(self, rootDir, relDir=STR_EMPTY):  # OSError
+    def getDirList(self, root_dir, rel_dir=STR_EMPTY):  # OSError
         # rootDir, relDir - unicode objects
-        if relDir == STR_EMPTY:
+        if rel_dir == STR_EMPTY:
             self.dict.clear()
-        currentDir = rootDir + relDir
-        currentDirList = os.listdir(currentDir)  # OSError
-        for f in currentDirList:
-            fullPath = currentDir + STR_SLASH + f
-            relPath = relDir + STR_SLASH + f
-            if os.path.isdir(fullPath):  # OSError
-                pathInfo = FileInfo(True)
-                pathInfo.mtime = int(os.path.getmtime(fullPath))  # OSError
-                self.dict[relPath] = pathInfo
-                self.getDirList(rootDir, relPath)
-            elif os.path.isfile(fullPath):  # OSError
-                pathInfo = FileInfo(False)
+        current_dir = root_dir + rel_dir
+        current_dir_list = os.listdir(current_dir)  # OSError
+        for f in current_dir_list:
+            full_path = current_dir + STR_SLASH + f
+            rel_path = rel_dir + STR_SLASH + f
+            if os.path.isdir(full_path):  # OSError
+                path_info = FileInfo(True)
+                path_info.mtime = int(os.path.getmtime(full_path))  # OSError
+                self.dict[rel_path] = path_info
+                self.getDirList(root_dir, rel_path)
+            elif os.path.isfile(full_path):  # OSError
+                path_info = FileInfo(False)
                 # read mtime, size and hash directly before file checking / archiving
-                self.dict[relPath] = pathInfo
+                self.dict[rel_path] = path_info
     
     def __unmarkAll__(self):
         for key in self.dict:
@@ -123,30 +123,30 @@ class FileList():  # OSError, IOError, CatalogFormatError
     
     # include only matched files/folders
     # use for "find"
-    def include(self, patternList):
-        if (patternList != None) and (len(patternList) > 0):
+    def include(self, pattern_list):
+        if (pattern_list is not None) and (len(pattern_list) > 0):
             # unmark all records
             self.__unmarkAll__()
             # mark included
-            for pattern in patternList:
+            for pattern in pattern_list:
                 for key in self.dict:
                     if fnmatch.fnmatch(key, pattern):
                         self.dict[key].marked = True
             # remove not marked (not included)
-            keyList = list(self.dict.keys())
-            for key in keyList:
+            key_list = list(self.dict.keys())
+            for key in key_list:
                 if not self.dict[key].marked:
                     del self.dict[key]
     
     # include not only matched files/folders but also all parent folders for matched files/folders
     # use for "create" and "restore"
-    def includeHierarchy(self, patternList):
-        if (patternList != None) and (len(patternList) > 0):
+    def includeHierarchy(self, pattern_list):
+        if (pattern_list is not None) and (len(pattern_list) > 0):
             # unmark all records
             self.__unmarkAll__()
             # mark included
-            keyList = list(self.dict.keys())
-            for pattern in patternList:
+            key_list = list(self.dict.keys())
+            for pattern in pattern_list:
                 for key in self.dict:
                     if fnmatch.fnmatch(key, pattern):
                         self.dict[key].marked = True
@@ -156,136 +156,122 @@ class FileList():  # OSError, IOError, CatalogFormatError
                             self.dict[d].marked = True
                             d = os.path.dirname(d)
             # remove not marked (not included)
-            keyList = list(self.dict.keys())
-            for key in keyList:
+            key_list = list(self.dict.keys())
+            for key in key_list:
                 if not self.dict[key].marked:
                     del self.dict[key]
     
     # check and if not exist all parent folders for files/folders in list
     def fixHierarchy(self):
-        keyList = list(self.dict.keys())
-        for key in keyList:
+        key_list = list(self.dict.keys())
+        for key in key_list:
             d = os.path.dirname(key)
             while d != STR_SLASH:
-                if d not in keyList:
-                    pathInfo = FileInfo(False)
-                    pathInfo.marked = False  # for 'include'
-                    pathInfo.isDir = True
-                    pathInfo.mtime = self.dict[key].mtime
-                    self.dict[d] = pathInfo
+                if d not in key_list:
+                    path_info = FileInfo(False)
+                    path_info.marked = False  # for 'include'
+                    path_info.isDir = True
+                    path_info.mtime = self.dict[key].mtime
+                    self.dict[d] = path_info
                 d = os.path.dirname(d)
     
-    def exclude(self, patternList):
-        if (patternList != None) and (len(patternList) > 0):
-            for pattern in patternList:
-                keyList = list(self.dict.keys())
-                for key in keyList:
+    def exclude(self, pattern_list):
+        if (pattern_list is not None) and (len(pattern_list) > 0):
+            for pattern in pattern_list:
+                key_list = list(self.dict.keys())
+                for key in key_list:
                     if fnmatch.fnmatch(key, pattern):
                         del self.dict[key]
     
-    # def calcHashes(self, rootDir, verbose=False):  # IOError
-    #    if verbose:
-    #        s1 = 0
-    #        for key in self.dict:
-    #            if (not self.dict[key].isDir) and (self.dict[key].hash == STR_EMPTY):
-    #                s1 = s1 + self.dict[key].size
-    #    # rootDir - unicode object
-    #    s2 = 0
-    #    for key in self.dict:
-    #        if (not self.dict[key].isDir) and (self.dict[key].hash == STR_EMPTY):
-    #            self.dict[key].hash = calcHash(rootDir + STR_SLASH + key) # IOError
-    #            if verbose:
-    #                s2 = s2 + self.dict[key].size
-    #                print('Calculated hash: ' + str(100*s2/s1) + '% - ' + str(s2) + '/' + str(s1))
-    
-    def save(self, fObject):  # IOError
-        # fObject = open('file.name', mode='w', encoding='utf-8')
-        fObject.write(STR_DIR_LIST + STR_EOL)
+    def save(self, file_object):  # IOError
+        # file_object = open('file.name', mode='w', encoding='utf-8')
+        file_object.write(STR_DIR_LIST + STR_EOL)
         key_list = list(self.dict.keys())
         key_list.sort()
         for key in key_list:
             if self.dict[key].isDir:
-                fObject.write(STR_DIR + STR_EOL)
-                fObject.write(key + STR_EOL)
-                fObject.write(str(self.dict[key].mtime) + STR_EOL)
-                fObject.write(STR_DIR_END + STR_EOL)
+                file_object.write(STR_DIR + STR_EOL)
+                file_object.write(key + STR_EOL)
+                file_object.write(str(self.dict[key].mtime) + STR_EOL)
+                file_object.write(STR_DIR_END + STR_EOL)
             else:
-                fObject.write(STR_FILE + STR_EOL)
-                fObject.write(key + STR_EOL)
-                fObject.write(str(self.dict[key].mtime) + STR_EOL)
-                fObject.write(str(self.dict[key].size) + STR_EOL)
-                fObject.write(self.dict[key].hash + STR_EOL)
-                fObject.write(STR_FILE_END + STR_EOL)
-        fObject.write(STR_DIR_LIST_END + STR_EOL)
+                file_object.write(STR_FILE + STR_EOL)
+                file_object.write(key + STR_EOL)
+                file_object.write(str(self.dict[key].mtime) + STR_EOL)
+                file_object.write(str(self.dict[key].size) + STR_EOL)
+                file_object.write(self.dict[key].hash + STR_EOL)
+                file_object.write(STR_FILE_END + STR_EOL)
+        file_object.write(STR_DIR_LIST_END + STR_EOL)
     
-    def load(self, fObject):  # IOError, CatalogFormatError
-        # fObject = open('file.name', mode='r', encoding='utf-8')
-        self.dict.clear()
-        fObject.seek(0, os.SEEK_SET)
-        
+    def load(self, file_object):  # IOError, CatalogFormatError
+        # file_object = open('file.name', mode='r', encoding='utf-8')
+
         # consts for state machine
-        WAIT_LIST = 0
-        WAIT_DIR_FILE = 1
-        WAIT_PATH = 2
-        WAIT_MTIME = 3
-        WAIT_SIZE = 4
-        WAIT_HASH = 5
-        WAIT_DIR_END = 6
-        WAIT_FILE_END = 7
-        
-        state = WAIT_LIST
-        infoIsDir = False
-        infoPath = STR_EMPTY
-        infoMtime = -1
-        infoSize = -1
-        infoHash = STR_EMPTY
-        for s in fObject:
+        wait_list = 0
+        wait_dir_file = 1
+        wait_path = 2
+        wait_mtime = 3
+        wait_size = 4
+        wait_hash = 5
+        wait_dir_end = 6
+        wait_file_end = 7
+
+        self.dict.clear()
+        file_object.seek(0, os.SEEK_SET)
+
+        state = wait_list
+        info_is_dir = False
+        info_path = STR_EMPTY
+        info_mtime = -1
+        info_size = -1
+        info_hash = STR_EMPTY
+        for s in file_object:
             line = s.strip()
-            if (state == WAIT_LIST) and (line == STR_DIR_LIST):
-                state = WAIT_DIR_FILE
+            if (state == wait_list) and (line == STR_DIR_LIST):
+                state = wait_dir_file
             
-            elif ((state == WAIT_DIR_FILE) and
+            elif ((state == wait_dir_file) and
                 ((line == STR_DIR) or (line == STR_FILE) or (line == STR_DIR_LIST_END))):
                 if line == STR_DIR:
-                    infoIsDir = True
-                    state = WAIT_PATH
+                    info_is_dir = True
+                    state = wait_path
                 elif line == STR_FILE:
-                    infoIsDir = False
-                    state = WAIT_PATH
+                    info_is_dir = False
+                    state = wait_path
                 elif line == STR_DIR_LIST_END:
                     return
             
-            elif state == WAIT_PATH:
-                infoPath = line
-                state = WAIT_MTIME
+            elif state == wait_path:
+                info_path = line
+                state = wait_mtime
             
-            elif state == WAIT_MTIME:
-                infoMtime = int(line)
-                if infoIsDir:
-                    state = WAIT_DIR_END
+            elif state == wait_mtime:
+                info_mtime = int(line)
+                if info_is_dir:
+                    state = wait_dir_end
                 else:
-                    state = WAIT_SIZE
+                    state = wait_size
             
-            elif state == WAIT_SIZE:
-                infoSize = int(line)
-                state = WAIT_HASH
+            elif state == wait_size:
+                info_size = int(line)
+                state = wait_hash
             
-            elif state == WAIT_HASH:
-                infoHash = line
-                state = WAIT_FILE_END
+            elif state == wait_hash:
+                info_hash = line
+                state = wait_file_end
             
-            elif (state == WAIT_DIR_END) and (line == STR_DIR_END):
-                self.dict[infoPath] = FileInfo(True)
-                self.dict[infoPath].mtime =infoMtime
-                isDir = False
-                state = WAIT_DIR_FILE
+            elif (state == wait_dir_end) and (line == STR_DIR_END):
+                self.dict[info_path] = FileInfo(True)
+                self.dict[info_path].mtime =info_mtime
+                info_is_dir = False
+                state = wait_dir_file
             
-            elif (state == WAIT_FILE_END) and (line == STR_FILE_END):
-                self.dict[infoPath] = FileInfo(False)
-                self.dict[infoPath].mtime =infoMtime
-                self.dict[infoPath].size = infoSize
-                self.dict[infoPath].hash = infoHash
-                state = WAIT_DIR_FILE
+            elif (state == wait_file_end) and (line == STR_FILE_END):
+                self.dict[info_path] = FileInfo(False)
+                self.dict[info_path].mtime =info_mtime
+                self.dict[info_path].size = info_size
+                self.dict[info_path].hash = info_hash
+                state = wait_dir_file
             
             else:
                 raise CatalogFormatError()  # CatalogFormatError
@@ -298,28 +284,28 @@ class HashList():  # IOError, CatalogFormatError
     def __init__(self):
         self.dict = {}
     
-    def save(self, fObject):  # IOError
-        # fObject = open('file.name', mode='w', encoding='utf-8')
-        fObject.write(STR_HASH_LIST + STR_EOL)
+    def save(self, file_object):  # IOError
+        # file_object = open('file.name', mode='w', encoding='utf-8')
+        file_object.write(STR_HASH_LIST + STR_EOL)
         key_list = list(self.dict.keys())
         key_list.sort()
         for key in key_list:
-            fObject.write(STR_HASH + STR_TAB + key + STR_TAB + self.dict[key] + STR_EOL)
-        fObject.write(STR_HASH_LIST_END + STR_EOL)
+            file_object.write(STR_HASH + STR_TAB + key + STR_TAB + self.dict[key] + STR_EOL)
+        file_object.write(STR_HASH_LIST_END + STR_EOL)
     
-    def load(self, fObject):  # IOError, CatalogFormatError
-        # fObject = open(u'file.name', mode='r', encoding='utf-8')
+    def load(self, file_object):  # IOError, CatalogFormatError
+        # file_object = open('file.name', mode='r', encoding='utf-8')
+        wait_list = 0
+        wait_hash = 1
         self.dict.clear()
-        fObject.seek(0, os.SEEK_SET)
-        
-        WAIT_LIST = 0
-        WAIT_HASH = 1
-        state = WAIT_LIST
-        for s in fObject:
+        file_object.seek(0, os.SEEK_SET)
+
+        state = wait_list
+        for s in file_object:
             line = s.strip()
-            if (state == WAIT_LIST) and (line == STR_HASH_LIST):
-                state = WAIT_HASH
-            elif state == WAIT_HASH:
+            if (state == wait_list) and (line == STR_HASH_LIST):
+                state = wait_hash
+            elif state == wait_hash:
                 if line == STR_HASH_LIST_END:
                     return
                 else:
@@ -332,21 +318,21 @@ class HashList():  # IOError, CatalogFormatError
 
 # not correct for unicode file names
 class TarFileWriter:  # OSError, IOError, tarfile.TarError
-    def __init__(self, name, maxPartSize, type='tar'):
+    def __init__(self, name, max_part_size, arch_type='tar'):
         self.TarName = name
         self.PartNumber = 0
         self.PartSize = 0
         self.PartFile = None
         self.Closed = True
-        self.MaxPartSize = (maxPartSize // tarfile.RECORDSIZE) * tarfile.RECORDSIZE
-        self.Type = type.lower()
-        if type == 'tar':
+        self.MaxPartSize = (max_part_size // tarfile.RECORDSIZE) * tarfile.RECORDSIZE
+        self.Type = arch_type.lower()
+        if arch_type == 'tar':
             self.Ext = STR_TAR_EXT
             self.Mode = 'w:'
-        elif type == 'gz':
+        elif arch_type == 'gz':
             self.Ext = STR_GZ_EXT
             self.Mode = 'w:gz'
-        elif type == 'bz2':
+        elif arch_type == 'bz2':
             self.Ext = STR_BZ2_EXT
             self.Mode = 'w:bz2'
         else:
@@ -360,41 +346,41 @@ class TarFileWriter:  # OSError, IOError, tarfile.TarError
     
     def __new_part(self):  # IOError
         self.close()
-        self.PartNumber = self.PartNumber + 1
+        self.PartNumber += 1
         self.PartFile = tarfile.open(self.TarName + STR_POINT + str(self.PartNumber) + self.Ext, self.Mode)
         self.PartSize = 0
         self.Closed = False
     
-    def add(self, fPath, tarName):  # OSError, IOError, tarfile.TarError
+    def add(self, file_path, tar_name):  # OSError, IOError, tarfile.TarError
         if self.Closed:
             self.__new_part()
         # prepare file object
-        fSize = os.path.getsize(fPath)  # OSError
-        fTarInfo = self.PartFile.gettarinfo(fPath)  # tarfile.TarError
-        fTarInfo.name = tarName
+        file_size = os.path.getsize(file_path)  # OSError
+        file_tar_info = self.PartFile.gettarinfo(file_path)  # tarfile.TarError
+        file_tar_info.name = tar_name
         
-        with open(fPath, 'rb') as fObject:  # IOError
+        with open(file_path, 'rb') as file_object:  # IOError
             # copy file to tar
-            while ((self.PartSize + fSize + 3*tarfile.BLOCKSIZE) > self.MaxPartSize): 
-                fSizeToSave = self.MaxPartSize - self.PartSize - 3*tarfile.BLOCKSIZE
-                fTarInfo.size = fSizeToSave
-                self.PartFile.addfile(fTarInfo, fObject)  # tarfile.TarError
-                self.PartSize = self.PartSize + tarfile.BLOCKSIZE + fSizeToSave
+            while (self.PartSize + file_size + 3*tarfile.BLOCKSIZE) > self.MaxPartSize:
+                file_size_to_save = self.MaxPartSize - self.PartSize - 3*tarfile.BLOCKSIZE
+                file_tar_info.size = file_size_to_save
+                self.PartFile.addfile(file_tar_info, file_object)  # tarfile.TarError
+                self.PartSize = self.PartSize + tarfile.BLOCKSIZE + file_size_to_save
                 assert (self.PartSize + 2*tarfile.BLOCKSIZE) == self.MaxPartSize
                 self.__new_part()
-                fSize = fSize - fSizeToSave
+                file_size -= file_size_to_save
                 
-            fTarInfo.size = fSize
-            self.PartFile.addfile(fTarInfo, fObject)  # tarfile.TarError
-            # recalc PartSize
+            file_tar_info.size = file_size
+            self.PartFile.addfile(file_tar_info, file_object)  # tarfile.TarError
+            # recalculate PartSize
             self.PartSize = self.PartSize + tarfile.BLOCKSIZE + \
-                            (fSize // tarfile.BLOCKSIZE) * tarfile.BLOCKSIZE
-            if ((fSize % tarfile.BLOCKSIZE) > 0):
-                self.PartSize = self.PartSize + tarfile.BLOCKSIZE
+                            (file_size // tarfile.BLOCKSIZE) * tarfile.BLOCKSIZE
+            if (file_size % tarfile.BLOCKSIZE) > 0:
+                self.PartSize += tarfile.BLOCKSIZE
         
         assert (self.PartSize + 2*tarfile.BLOCKSIZE) <= self.MaxPartSize
         
-        if ((self.PartSize + 3*tarfile.BLOCKSIZE) >= self.MaxPartSize):
+        if (self.PartSize + 3*tarfile.BLOCKSIZE) >= self.MaxPartSize:
             self.close()
 
 
@@ -422,60 +408,43 @@ class TarFileReader:  # KeyError, IOError, tarfile.TarError
     
     def __next_part(self):  # IOError
         self.close()
-        self.PartNumber = self.PartNumber + 1
+        self.PartNumber += 1
         self.PartFile = tarfile.open(self.TarName + STR_POINT + str(self.PartNumber) + self.Ext)
     
-    # def list(self):
-    #    self.PartNumber = 0
-    #    noFile = False
-    #    lst = []
-    #    while not noFile:
-    #        try:
-    #            self.__next_part()
-    #        except IOError:
-    #            noFile = True
-    #        if not noFile:
-    #            fTarInfo = self.PartFile.next()
-    #            while fTarInfo <> None:
-    #                if fTarInfo.name not in lst:
-    #                    lst.append(fTarInfo.name)
-    #                fTarInfo = self.PartFile.next()
-    #    return lst
-    
-    def extract(self, tarName, fPath):  # KeyError, IOError, tarfile.TarError
+    def extract(self, tar_name, file_path):  # KeyError, IOError, tarfile.TarError
         self.PartNumber = 0
         
         # ищем первый том в котором есть такой файл
         found = False
-        noFile = False
-        while not (found or noFile):
+        no_file = False
+        while not (found or no_file):
             try:
                 self.__next_part()
-                fTarInfo = self.PartFile.getmember(tarName)
+                file_tar_info = self.PartFile.getmember(tar_name)
                 found = True
             except IOError:
-                noFile = True
+                no_file = True
             except KeyError:
                 pass
         
         if found:
-            with open(fPath, 'wb') as fObject:  # IOError
+            with open(file_path, 'wb') as file_object:  # IOError
                 while found:
                     # копируем в файл
-                    tarBuffer = self.PartFile.extractfile(fTarInfo)  # tarfile.TarError
-                    fSize = fTarInfo.size
-                    while (fSize > 0):
-                        if (fSize > tarfile.BLOCKSIZE):
-                            fSizeToSave = tarfile.BLOCKSIZE
+                    tar_buffer = self.PartFile.extractfile(file_tar_info)  # tarfile.TarError
+                    file_size = file_tar_info.size
+                    while file_size > 0:
+                        if file_size > tarfile.BLOCKSIZE:
+                            file_size_to_save = tarfile.BLOCKSIZE
                         else:
-                            fSizeToSave = fSize
-                        fObject.write(tarBuffer.read(tarfile.BLOCKSIZE))  # IOError, tarfile.TarError
-                        fSize = fSize - fSizeToSave
-                    tarBuffer.close()  # tarfile.TarError
+                            file_size_to_save = file_size
+                        file_object.write(tar_buffer.read(tarfile.BLOCKSIZE))  # IOError, tarfile.TarError
+                        file_size = file_size - file_size_to_save
+                    tar_buffer.close()  # tarfile.TarError
                     # проверяем в следующем томе
                     try:
                         self.__next_part()
-                        fTarInfo = self.PartFile.getmember(tarName)  # tarfile.TarError
+                        file_tar_info = self.PartFile.getmember(tar_name)  # tarfile.TarError
                     except IOError:
                         found = False
                     except KeyError:
@@ -484,49 +453,49 @@ class TarFileReader:  # KeyError, IOError, tarfile.TarError
             raise KeyError()
 
 
-def fCreate(args):
+def sh_create(sh_args):
     # check source
-    if not os.path.isdir(args.source):
+    if not os.path.isdir(sh_args.source):
         print('ERROR: Source not found!')
         return
     
     # check repository
-    if not os.path.isdir(args.repository):
+    if not os.path.isdir(sh_args.repository):
         print('ERROR: Repository not found!')
         return
     
     # check if files with backup name exist
-    if os.path.isfile(args.repository + STR_SLASH + args.name + STR_CAT_EXT):
+    if os.path.isfile(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT):
         print('ERROR: Such archive already exists!')
         return
     
     # create sourceFileList
-    sourceList = FileList()
+    source_list = FileList()
     try:
-        sourceList.getDirList(args.source)
+        source_list.getDirList(sh_args.source)
     except IOError as e:
         print('ERROR: Can not read: ' + e.filename)
         return
     
     # include / exclude files / dirs
-    sourceList.includeHierarchy(args.include)
-    sourceList.exclude(args.exclude)
+    source_list.includeHierarchy(sh_args.include)
+    source_list.exclude(sh_args.exclude)
             
     # create TmpHashList
-    hashList = HashList()
+    hash_list = HashList()
     
-    if args.reference != None:
+    if sh_args.reference is not None:
         # check if reference file exists
-        refPath = args.repository + '/' + args.reference + STR_CAT_EXT
-        if not os.path.isfile(refPath):
+        ref_path = sh_args.repository + '/' + sh_args.reference + STR_CAT_EXT
+        if not os.path.isfile(ref_path):
             print('ERROR: Reference not found!')
             return
-        # load referenceList and hashList
-        referenceList = FileList()
+        # load reference_list and hash_list
+        reference_list = FileList()
         try:
-            fObject = open(refPath, mode='r', encoding='utf-8')
-            referenceList.load(fObject)
-            hashList.load(fObject)
+            file_object = open(ref_path, mode='r', encoding='utf-8')
+            reference_list.load(file_object)
+            hash_list.load(file_object)
         except IOError:
             print('ERROR: Can not read reference catalogue file!')
             return
@@ -534,53 +503,53 @@ def fCreate(args):
             print('ERROR: Reference catalogue is damaged!')
             return
         finally:
-            fObject.close()
+            file_object.close()
     
     # compression
     compr = 'tar'
-    if args.compression != None:
-        compr = args.compression
+    if sh_args.compression is not None:
+        compr = sh_args.compression
     
     # create TarFileWriter
-    writer = TarFileWriter(args.repository + STR_SLASH + args.name, args.size, compr)
+    writer = TarFileWriter(sh_args.repository + STR_SLASH + sh_args.name, sh_args.size, compr)
     # check files and if new/changed add to archive
-    cAll = 0
-    cNew = 0
-    sizeAll = 0
-    sizeNew = 0
-    keyList = list(sourceList.dict)
-    keyList.sort()
-    for fileName in keyList:
-        filePath = args.source + fileName
-        if not sourceList.dict[fileName].isDir:
+    c_all = 0
+    c_new = 0
+    size_all = 0
+    size_new = 0
+    key_list = list(source_list.dict)
+    key_list.sort()
+    for file_name in key_list:
+        file_path = sh_args.source + file_name
+        if not source_list.dict[file_name].isDir:
             ok = False
             while not ok:
                 try:
                     # get date and size
-                    sourceList.dict[fileName].mtime = int(os.path.getmtime(filePath))
-                    sourceList.dict[fileName].size = os.path.getsize(filePath)
+                    source_list.dict[file_name].mtime = int(os.path.getmtime(file_path))
+                    source_list.dict[file_name].size = os.path.getsize(file_path)
                     # check if such file is in reference
-                    if (not args.recalculate) and (args.reference != None) and \
-                            (fileName in referenceList.dict) and \
-                            (not referenceList.dict[fileName].isDir) and \
-                            (sourceList.dict[fileName].mtime == referenceList.dict[fileName].mtime) and \
-                            (sourceList.dict[fileName].size == referenceList.dict[fileName].size):
-                        sourceList.dict[fileName].hash = referenceList.dict[fileName].hash
+                    if (not sh_args.recalculate) and (sh_args.reference != None) and \
+                            (file_name in reference_list.dict) and \
+                            (not reference_list.dict[file_name].isDir) and \
+                            (source_list.dict[file_name].mtime == reference_list.dict[file_name].mtime) and \
+                            (source_list.dict[file_name].size == reference_list.dict[file_name].size):
+                        source_list.dict[file_name].hash = reference_list.dict[file_name].hash
                     else:
                         # calculate hash
-                        sourceList.dict[fileName].hash = calcHash(filePath)
+                        source_list.dict[file_name].hash = calc_hash(file_path)
                         # add file to archive
-                        tarName = hashName(sourceList.dict[fileName])
-                        if tarName not in hashList.dict:
-                            hashList.dict[tarName] = args.name
-                            writer.add(args.source + fileName, tarName)
-                            cNew = cNew + 1
-                            sizeNew = sizeNew + sourceList.dict[fileName].size
-                    sizeAll = sizeAll + sourceList.dict[fileName].size
+                        tar_name = hash_name(source_list.dict[file_name])
+                        if tar_name not in hash_list.dict:
+                            hash_list.dict[tar_name] = sh_args.name
+                            writer.add(sh_args.source + file_name, tar_name)
+                            c_new += 1
+                            size_new = size_new + source_list.dict[file_name].size
+                    size_all = size_all + source_list.dict[file_name].size
                     ok = True
                 except (OSError, IOError) as e:
                     print('ERROR: Can not read: ' + e.filename)
-                    if args.ignore:
+                    if sh_args.ignore:
                         answer = 'i'
                     else:
                         answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
@@ -588,7 +557,7 @@ def fCreate(args):
                         writer.close()
                         return
                     elif answer == 'i':
-                        del sourceList.dict[fileName]
+                        del source_list.dict[file_name]
                         ok = True
                 except tarfile.TarError:
                     print('ERROR: Can not write files to archive!')
@@ -596,58 +565,58 @@ def fCreate(args):
                     if answer == 'c':
                         writer.close()
                         return
-            cAll = cAll + 1
-        if not args.quiet:
+            c_all += 1
+        if not sh_args.quiet:
             sys.stdout.write("\rFiles (New/All): %s / %s, Size (New/All): %.02f Mb / %.02f Mb" % (
-                            cNew, cAll, sizeNew/1024.0/1024.0, sizeAll/1024.0/1024.0))
+                            c_new, c_all, size_new/1024.0/1024.0, size_all/1024.0/1024.0))
             sys.stdout.flush()
     
     # close TarFileWriter
     writer.close()
     
-    if not args.quiet:
+    if not sh_args.quiet:
         sys.stdout.write(STR_EOL)
         sys.stdout.flush()
     
     # save catalogue
     try:                  
-        fObject = open(args.repository + STR_SLASH + args.name + STR_CAT_EXT,
+        file_object = open(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT,
                             mode='w', encoding='utf-8')
-        sourceList.save(fObject)
-        hashList.save(fObject)
+        source_list.save(file_object)
+        hash_list.save(file_object)
     except IOError:
         print('ERROR: Can not create catalogue file!')
         return
     finally:
-        fObject.close()
+        file_object.close()
 
 
-def fFind(args):
+def sh_find(sh_args):
     # check repository
-    if not os.path.isdir(args.repository):
+    if not os.path.isdir(sh_args.repository):
         print('ERROR: Repository not found!\n')
         return
     
     # get file list
-    catList = os.listdir(args.repository)
-    catList.sort()
-    keyList = list(catList)
-    for key in keyList:
-        if not fnmatch.fnmatch(key, args.name + STR_CAT_EXT):
-            del catList[catList.index(key)]
+    cat_list = os.listdir(sh_args.repository)
+    cat_list.sort()
+    key_list = list(cat_list)
+    for key in key_list:
+        if not fnmatch.fnmatch(key, sh_args.name + STR_CAT_EXT):
+            del cat_list[cat_list.index(key)]
     
     # check if something found
-    if len(catList) == 0:
+    if len(cat_list) == 0:
         print('ERROR: No catalogue found!\n')
         return
     
     # looking for patterns in all catalogues
-    for cat in catList:
+    for cat in cat_list:
         # loading catalogue
-        fileList = FileList()
+        file_list = FileList()
         try:
-            fObject = open(args.repository + STR_SLASH + cat, mode='r', encoding='utf-8')
-            fileList.load(fObject)
+            file_object = open(sh_args.repository + STR_SLASH + cat, mode='r', encoding='utf-8')
+            file_list.load(file_object)
         except IOError:
             print('ERROR: Can not read  catalogue file: ' + cat)
             return
@@ -655,43 +624,43 @@ def fFind(args):
             print('ERROR: Catalogue is damaged: ' + cat)
             return
         finally:
-            fObject.close()
+            file_object.close()
         
         # include / exclude files / dirs
-        fileList.include(args.include)
-        fileList.exclude(args.exclude)
+        file_list.include(sh_args.include)
+        file_list.exclude(sh_args.exclude)
         
         # looking for matching files and dirs
-        keyList = list(fileList.dict.keys())
-        keyList.sort()
-        for key in keyList:
+        key_list = list(file_list.dict.keys())
+        key_list.sort()
+        for key in key_list:
             print(cat + ': ' + key)
 
 
-def fRestore(args):
+def sh_restore(sh_args):
     # check repository
-    if not os.path.isdir(args.repository):
+    if not os.path.isdir(sh_args.repository):
         print('ERROR: Repository not found!\n')
         return
     
     # check existence of catalogue file
-    if not os.path.isfile(args.repository + STR_SLASH + args.name + STR_CAT_EXT):
+    if not os.path.isfile(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT):
         print('ERROR: Catalogue not found!\n')
         return
     
     # check destination existence
-    if not os.path.isdir(args.destination):
+    if not os.path.isdir(sh_args.destination):
         print('ERROR: Destination not found!\n')
         return
     
     # read FileList and HashList from catalogue
-    sourceList = FileList()
-    hashList = HashList()
+    source_list = FileList()
+    hash_list = HashList()
     try:
-        fObject = open(args.repository + STR_SLASH + args.name + STR_CAT_EXT,
+        file_object = open(sh_args.repository + STR_SLASH + sh_args.name + STR_CAT_EXT,
                             mode='r', encoding='utf-8')
-        sourceList.load(fObject)
-        hashList.load(fObject)
+        source_list.load(file_object)
+        hash_list.load(file_object)
     except IOError:
         print('ERROR: Can not read catalogue file!')
         return
@@ -699,38 +668,38 @@ def fRestore(args):
         print('ERROR: Catalogue is damaged!')
         return
     finally:
-        fObject.close()
+        file_object.close()
     
     # include / exclude files / dirs
-    sourceList.fixHierarchy()
-    sourceList.includeHierarchy(args.include)
-    sourceList.exclude(args.exclude)
+    source_list.fixHierarchy()
+    source_list.includeHierarchy(sh_args.include)
+    source_list.exclude(sh_args.exclude)
     
     # create not existing dirs and extract new or changed files
-    cAll = 0
-    cNew = 0
-    sizeAll = 0
-    sizeNew = 0
-    keyList = list(sourceList.dict)
-    keyList.sort()
-    for fileName in keyList:
-        filePath = args.destination + fileName
+    c_all = 0
+    c_new = 0
+    size_all = 0
+    size_new = 0
+    key_list = list(source_list.dict)
+    key_list.sort()
+    for file_name in key_list:
+        file_path = sh_args.destination + file_name
         # make directory
-        if sourceList.dict[fileName].isDir:
-            fileDir = filePath
+        if source_list.dict[file_name].isDir:
+            file_dir = file_path
         else:
-            (fileDir, stub) = os.path.split(filePath)
+            (file_dir, stub) = os.path.split(file_path)
         ok = False
         while not ok:
             try:
-                if os.path.isfile(fileDir):
-                    os.remove(fileDir)
-                if not os.path.isdir(fileDir):
-                    os.makedirs(fileDir)
+                if os.path.isfile(file_dir):
+                    os.remove(file_dir)
+                if not os.path.isdir(file_dir):
+                    os.makedirs(file_dir)
                 ok = True
             except OSError as e:
                 print('ERROR: Can not create directory: ' + e.filename)
-                if args.ignore:
+                if sh_args.ignore:
                     answer = 'i'
                 else:
                     answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
@@ -739,29 +708,29 @@ def fRestore(args):
                 elif answer == 'i':
                     ok = True
         # restore file
-        if not sourceList.dict[fileName].isDir:
-            hashKey = hashName(sourceList.dict[fileName])
-            backupFile = hashList.dict[hashKey]
+        if not source_list.dict[file_name].isDir:
+            hash_key = hash_name(source_list.dict[file_name])
+            backup_file = hash_list.dict[hash_key]
             ok = False
             while not ok:
                 try:
                     # check if such file exists
-                    reader = TarFileReader(args.repository + STR_SLASH + backupFile)
-                    if os.path.isfile(filePath) and \
-                            (sourceList.dict[fileName].mtime == int(os.path.getmtime(filePath))) and \
-                            (sourceList.dict[fileName].size == os.path.getsize(filePath)) and \
-                            (sourceList.dict[fileName].hash == calcHash(filePath)):
+                    reader = TarFileReader(sh_args.repository + STR_SLASH + backup_file)
+                    if os.path.isfile(file_path) and \
+                            (source_list.dict[file_name].mtime == int(os.path.getmtime(file_path))) and \
+                            (source_list.dict[file_name].size == os.path.getsize(file_path)) and \
+                            (source_list.dict[file_name].hash == calc_hash(file_path)):
                         pass
                     else:
-                        if os.path.isdir(filePath):
-                            shutil.rmtree(filePath)
-                        reader.extract(hashKey, filePath)
-                        cNew = cNew + 1
-                        sizeNew = sizeNew + sourceList.dict[fileName].size
+                        if os.path.isdir(file_path):
+                            shutil.rmtree(file_path)
+                        reader.extract(hash_key, file_path)
+                        c_new += 1
+                        size_new = size_new + source_list.dict[file_name].size
                     ok = True
                 except (OSError, IOError) as e:
                     print('ERROR: Can not restore file: ' + e.filename)
-                    if args.ignore:
+                    if sh_args.ignore:
                         answer = 'i'
                     else:
                         answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
@@ -771,19 +740,18 @@ def fRestore(args):
                         ok = True
                 finally:
                     reader.close()
-            cAll = cAll + 1
-            sizeAll = sizeAll + sourceList.dict[fileName].size
+            c_all += 1
+            size_all = size_all + source_list.dict[file_name].size
         # set time
         ok = False
         while not ok:
             try:
-                os.utime(filePath,
-                        (sourceList.dict[fileName].mtime,
-                        sourceList.dict[fileName].mtime))
+                os.utime(file_path, (source_list.dict[file_name].mtime,
+                        source_list.dict[file_name].mtime))
                 ok = True
             except OSError as e:
                 print('ERROR: Can not update time for: ' + e.filename)
-                if args.ignore:
+                if sh_args.ignore:
                     answer = 'i'
                 else:
                     answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
@@ -792,31 +760,31 @@ def fRestore(args):
                 elif answer == 'i':
                     ok = True
         sys.stdout.write("\rFiles (New/All): %s / %s, Size (New/All): %.02f Mb / %.02f Mb" % (
-                        cNew, cAll, sizeNew/1024.0/1024.0, sizeAll/1024.0/1024.0))
+                        c_new, c_all, size_new/1024.0/1024.0, size_all/1024.0/1024.0))
         sys.stdout.flush()
     
     sys.stdout.write(STR_EOL)
     sys.stdout.flush()
     
     # get FileList for destination
-    if args.delete:
-        destinationList = FileList()
-        destinationList.getDirList(args.destination)
+    if sh_args.delete:
+        destination_list = FileList()
+        destination_list.getDirList(sh_args.destination)
         # remove old files
-        keyList = list(destinationList.dict.keys())
-        keyList.sort()
-        for fileName in keyList:
-            filePath = args.destination + fileName
-            if (not destinationList.dict[fileName].isDir) and \
-                    (fileName not in sourceList.dict):
+        key_list = list(destination_list.dict.keys())
+        key_list.sort()
+        for file_name in key_list:
+            file_path = sh_args.destination + file_name
+            if (not destination_list.dict[file_name].isDir) and \
+                    (file_name not in source_list.dict):
                 ok = False
                 while not ok:
                     try:
-                        os.remove(filePath)
+                        os.remove(file_path)
                         ok = True
                     except OSError as e:
                         print('ERROR: Can not delete file: ' + e.filename)
-                        if args.ignore:
+                        if sh_args.ignore:
                             answer = 'i'
                         else:
                             answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
@@ -825,21 +793,21 @@ def fRestore(args):
                         elif answer == 'i':
                             ok = True
         # remove old dirs
-        keyList = list(destinationList.dict.keys())
-        keyList.sort()
-        for fileName in keyList:
-            filePath = args.destination + fileName
-            if destinationList.dict[fileName].isDir and \
-                    (fileName not in sourceList.dict):
+        key_list = list(destination_list.dict.keys())
+        key_list.sort()
+        for file_name in key_list:
+            file_path = sh_args.destination + file_name
+            if destination_list.dict[file_name].isDir and \
+                    (file_name not in source_list.dict):
                 ok = False
                 while not ok:
                     try:
-                        if os.path.isdir(filePath):
-                            shutil.rmtree(filePath)
+                        if os.path.isdir(file_path):
+                            shutil.rmtree(file_path)
                         ok = True
                     except OSError as e:
                         print('ERROR: Can not delete directory: ' + e.filename)
-                        if args.ignore:
+                        if sh_args.ignore:
                             answer = 'i'
                         else:
                             answer = input('Cancel (c) / Ignore (i) / Retry (other): ')
@@ -858,36 +826,51 @@ def fRestore(args):
 parser = argparse.ArgumentParser(description='version 0.6')
 subparsers = parser.add_subparsers()
 
-parser_create = subparsers.add_parser('create') #
-parser_create.add_argument('source', help='Directory tree that will be backed up.') # dir
-parser_create.add_argument('repository', help='Directory in which backup will be stored.') # dir
-parser_create.add_argument('name', help='Basename for backup.') # name
-parser_create.add_argument('-r', '--reference', help='Reference basename for differential backup. Reference catalog should be stored in the same repository.') # path
+parser_create = subparsers.add_parser('create')  #
+parser_create.add_argument('source', help='Directory tree that will be backed up.')  # dir
+parser_create.add_argument('repository', help='Directory in which backup will be stored.')  # dir
+parser_create.add_argument('name', help='Basename for backup.')  # name
+parser_create.add_argument('-r', '--reference',
+                           help='Reference basename for differential backup. '
+                                'Reference catalog should be stored in the same repository.')  # path
 parser_create.add_argument('-s', '--size', type=int, default=1024*1024*1020, help='Size of one slice.')
-parser_create.add_argument('-i', '--include', nargs='*', help='Mask list. Files/Dirs matching at least one mask will be included in backup. If no mask specified all Files/Dirs will be included.')
-parser_create.add_argument('-e', '--exclude', nargs='*', help='Mask list. Files/Dirs matching at least one mask will be excluded from backup.')
-parser_create.add_argument('-q', '--quiet', action='store_true', help='Nothing is displayed if operation succeeds.') # !!!
+parser_create.add_argument('-i', '--include', nargs='*',
+                           help='Mask list. Files/Dirs matching at least one mask will be included in backup. '
+                                'If no mask specified all Files/Dirs will be included.')
+parser_create.add_argument('-e', '--exclude', nargs='*',
+                           help='Mask list. Files/Dirs matching at least one mask will be excluded from backup.')
+parser_create.add_argument('-q', '--quiet', action='store_true',
+                           help='Nothing is displayed if operation succeeds.')  # !!!
 parser_create.add_argument('-g', '--ignore', action='store_true', help='Ignore all errors.')
 parser_create.add_argument('-c', '--compression', help="'tar'-default, 'gz' or 'bz2'")
-parser_create.add_argument('-a', '--recalculate', action='store_true', help="Recalculate all hashes again. Don't use hashes from reference.")
-parser_create.set_defaults(func=fCreate)
+parser_create.add_argument('-a', '--recalculate', action='store_true',
+                           help="Recalculate all hashes again. Don't use hashes from reference.")
+parser_create.set_defaults(func=sh_create)
 
-parser_find = subparsers.add_parser('find') # simple regular expressions
-parser_find.add_argument('repository', help='Directory in which backup is stored.') # dir
-parser_find.add_argument('name', help='Mask for backup basename. Several backups can be looked thorough.') # name pattern (without ext)
-parser_find.add_argument('-i', '--include', nargs='*', help='Mask list. Files/Dirs matching at least one mask will be shown. If no mask specified all Files/Dirs will be shown.')
-parser_find.add_argument('-e', '--exclude', nargs='*', help='Mask list. Files/Dirs matching at least one mask will not be shown.')
-parser_find.set_defaults(func=fFind)
+parser_find = subparsers.add_parser('find')  # simple regular expressions
+parser_find.add_argument('repository', help='Directory in which backup is stored.')  # dir
+parser_find.add_argument('name', help='Mask for backup basename. '
+                                      'Several backups can be looked thorough.')  # name pattern (without ext)
+parser_find.add_argument('-i', '--include', nargs='*',
+                         help='Mask list. Files/Dirs matching at least one mask will be shown. '
+                              'If no mask specified all Files/Dirs will be shown.')
+parser_find.add_argument('-e', '--exclude', nargs='*',
+                         help='Mask list. Files/Dirs matching at least one mask will not be shown.')
+parser_find.set_defaults(func=sh_find)
 
-parser_restore = subparsers.add_parser('restore') # restore backup
-parser_restore.add_argument('repository', help='Directory in which backup is stored.') # dir
-parser_restore.add_argument('name', help='Basename for backup to be restored.') # name
-parser_restore.add_argument('destination', help='Directory which will be restored.') # dir
-parser_restore.add_argument('-i', '--include', nargs='*', help='Mask list. Files/Dirs matching at least one mask will be restored. If no mask specified all Files/Dirs will be restored.')
-parser_restore.add_argument('-e', '--exclude', nargs='*', help='Mask list. Files/Dirs matching at least one mask will not be restored.')
-parser_restore.add_argument('-d', '--delete', action='store_true', help='Delete Files/Dirs not existing in backup.')
+parser_restore = subparsers.add_parser('restore')  # restore backup
+parser_restore.add_argument('repository', help='Directory in which backup is stored.')  # dir
+parser_restore.add_argument('name', help='Basename for backup to be restored.')  # name
+parser_restore.add_argument('destination', help='Directory which will be restored.')  # dir
+parser_restore.add_argument('-i', '--include', nargs='*',
+                            help='Mask list. Files/Dirs matching at least one mask will be restored. '
+                                 'If no mask specified all Files/Dirs will be restored.')
+parser_restore.add_argument('-e', '--exclude', nargs='*',
+                            help='Mask list. Files/Dirs matching at least one mask will not be restored.')
+parser_restore.add_argument('-d', '--delete', action='store_true',
+                            help='Delete Files/Dirs not existing in backup.')
 parser_restore.add_argument('-g', '--ignore', action='store_true', help='Ignore all errors.')
-parser_restore.set_defaults(func=fRestore)
+parser_restore.set_defaults(func=sh_restore)
 
 args = parser.parse_args()
 args.func(args)
