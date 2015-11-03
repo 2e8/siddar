@@ -827,7 +827,7 @@ def sh_restore(sh_args):
 # reference - путь/имя каталога эталона с расширением
 # slice - том архива, перед расширением номер [backup].3.tar
 # catalogue - каталог архива - [backup].cat
-parser = argparse.ArgumentParser(description='version 0.6')
+parser = argparse.ArgumentParser(description='version 0.6.2')
 subparsers = parser.add_subparsers()
 
 parser_create = subparsers.add_parser('create')  #
